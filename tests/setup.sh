@@ -1,0 +1,1 @@
+export PATH=$PATH:/data/work/LLVM/llvm-src/utils/lit
