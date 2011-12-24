@@ -80,7 +80,7 @@ class Cursor(Storm):
             "start_line INTEGER, start_col INTEGER, "\
             "end_line INTEGER, end_col INTEGER)"
 
-class DefinitionCursor(object):
+class DefinitionCursor(Storm):
     __storm_table__ = "defcursor"
     id = Int(primary=True)
     defcursor_id = Int()
@@ -89,6 +89,11 @@ class DefinitionCursor(object):
 
     def __init__(self):
         pass
+
+    def __str__(self):
+        refstr = [str(r) for r in self.references]
+        string = "< " + str(self.defcursor) + "Refs: " + ",".join(refstr) + " >"
+        return string
 
     @staticmethod
     def createTableString():
@@ -105,9 +110,8 @@ class IndexDB:
         self.db      = None
         self.stormdb = None
 
-        #Variable to cache the last filename and the id
-        self.lastfilename = None
-        self.lastfilename_id = None
+        #Variable to cache the last filename
+        self.lastfile = None
 
     def create(self, cursorKinds):
         self.db = create_database(self.dbtype+":"+self.dbname+
@@ -140,18 +144,80 @@ class IndexDB:
             sys.exit(1)
         return self
 
-    def insertDefinitionNode(self, location, nodeKind):
-        
-        pass
+    def getFileNameId(self, name):
+        unicodeName = unicode(name)
+        result  = self.stormdb.find(FileName, FileName.name == unicodeName)
+        newfile = None
+        if result.is_empty():
+            newfile = FileName(unicodeName)
+            self.stormdb.add(newfile)
+            self.stormdb.flush()
+        else:
+            newfile = result.one()
+        return newfile
+            
+    def getNodeKindId(self, nodeKind):
+        result = self.stormdb.find(CursorKind, CursorKind.value == 
+                                   nodeKind.value)
+        assert (not result.is_empty())
+        return result.one()
 
-    def insertReferenceNode(self):
-        pass
+    def getCursor(self, location):
+        fileId = self.getFileNameId(location.filename).id
+        print location
+        result = self.stormdb.find(Cursor, 
+                                    Cursor.filename_id == fileId,
+                                    Cursor.start_line  == location.sl,
+                                    Cursor.start_col   == location.sc,
+                                    Cursor.end_line    == location.el,
+                                    Cursor.end_col     == location.ec)
+        assert (not result.is_empty())
+        for r in result:
+            print r
+        return result.one()
+        
+
+    #TODO: Need to implement rollback and errorhandling
+    def insertDefinitionNode(self, location, nodeKind):
+        fileId     = self.getFileNameId(location.filename).id
+        nodeKindId = self.getNodeKindId(nodeKind).id
+        assert (fileId != None and nodeKindId != None)
+
+        cursor = Cursor(location, fileId, nodeKindId)
+        self.stormdb.add(cursor)
+        self.stormdb.flush()
+        defCursor = DefinitionCursor()
+        defCursor.defcursor = cursor
+        defCursor.references.add(cursor)
+        self.stormdb.flush()
+        print "Cursor.Definition %s " % cursor.definition
+
+    #TODO: Need to implement rollback and errorhandling
+    def insertReferenceNode(self, location, nodeKind, defLocation):
+        fileId     = self.getFileNameId(location.filename).id
+        nodeKindId = self.getNodeKindId(nodeKind).id
+        assert (fileId != None and nodeKindId != None)
+        
+        cursor = Cursor(location, fileId, nodeKindId)
+        self.stormdb.add(cursor)
+        self.stormdb.flush()
+        defCursor = self.getCursor(defLocation).definition
+        defCursor.references.add(cursor)
+        self.stormdb.flush()
+        print "Cursor.Definition %s " % defCursor
 
 __all__ = [ 'IndexDB', 'Location' ]
 
 if __name__ == "__main__":
     db = IndexDB("/home/manish/symbols.db")
     db.create(clang.cindex.CursorKind.get_all_kinds())
+    filename = "/data/work/clang-browser/src/hw.c"
+    defloc = Location(filename, 3, 12, 3, 5)
+    refloc = Location(filename, 4, 12, 4, 5)
+    db.insertDefinitionNode(defloc, clang.cindex.CursorKind.VAR_DECL)
+    db.insertReferenceNode(refloc, clang.cindex.CursorKind.DECL_REF_EXPR, 
+                           defloc)
+
 
 if __name__ == '__main__2':
     print CursorKind.createTableString()
