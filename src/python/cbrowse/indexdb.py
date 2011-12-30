@@ -40,7 +40,8 @@ class FileName(object):
         return "CREATE TABLE IF NOT EXISTS filename "\
             "(id INTEGER PRIMARY KEY, name VARCHAR)"
 
-Location = collections.namedtuple('Location', 'filename, sl, sc, el, ec')
+SymbolLocation = collections.namedtuple('SymbolLocation', 
+                                        'filename, sl, sc, el, ec, nodekind')
 
 class Cursor(Storm):
     __storm_table__ = "cursor"
@@ -176,11 +177,12 @@ class IndexDB:
             print r
         return result.one()
         
+class IndexDBWriter(IndexDB):
 
     #TODO: Need to implement rollback and errorhandling
-    def insertDefinitionNode(self, location, nodeKind):
+    def insertDefinitionNode(self, location):
         fileId     = self.getFileNameId(location.filename).id
-        nodeKindId = self.getNodeKindId(nodeKind).id
+        nodeKindId = self.getNodeKindId(location.nodekind).id
         assert (fileId != None and nodeKindId != None)
 
         cursor = Cursor(location, fileId, nodeKindId)
@@ -193,9 +195,9 @@ class IndexDB:
         print "Cursor.Definition %s " % cursor.definition
 
     #TODO: Need to implement rollback and errorhandling
-    def insertReferenceNode(self, location, nodeKind, defLocation):
+    def insertReferenceNode(self, location, defLocation):
         fileId     = self.getFileNameId(location.filename).id
-        nodeKindId = self.getNodeKindId(nodeKind).id
+        nodeKindId = self.getNodeKindId(location.nodekind).id
         assert (fileId != None and nodeKindId != None)
         
         cursor = Cursor(location, fileId, nodeKindId)
@@ -206,17 +208,40 @@ class IndexDB:
         self.stormdb.flush()
         print "Cursor.Definition %s " % defCursor
 
-__all__ = [ 'IndexDB', 'Location' ]
+class IndexDBReader(IndexDB):
+    dbtype    = "sqlite"
+    dbtimeout = "2"
+    def __init__(self, dbname):
+        self.dbname  = dbname
+        self.db = create_database(self.dbtype+":"+self.dbname+
+                                  "?timeout="+self.dbtimeout)
+    
+        try:
+            self.stormdb = Store(self.db)
+        except storm.exceptions.StormError:
+            sys.stderr.write("Error: in accessing the database (%s)\n" %
+                             self.dbname)
+            sys.exit(1)
+        
+    def getDefinitionNode(refloc):
+        self.stormdb.find
+        pass
+    def getReferenceNodes(defloc):
+        pass
+    
+
+__all__ = [ 'IndexDB', 'IndexDBReader', 'SymbolLocation' ]
 
 if __name__ == "__main__":
-    db = IndexDB("/home/manish/symbols.db")
+    db = IndexDBWriter("/home/manish/symbols.db")
     db.create(clang.cindex.CursorKind.get_all_kinds())
     filename = "/data/work/clang-browser/src/hw.c"
-    defloc = Location(filename, 3, 12, 3, 5)
-    refloc = Location(filename, 4, 12, 4, 5)
-    db.insertDefinitionNode(defloc, clang.cindex.CursorKind.VAR_DECL)
-    db.insertReferenceNode(refloc, clang.cindex.CursorKind.DECL_REF_EXPR, 
-                           defloc)
+    defloc = SymbolLocation(filename, 3, 12, 3, 5, 
+                            clang.cindex.CursorKind.VAR_DECL)
+    refloc = SymbolLocation(filename, 4, 12, 4, 5, 
+                      clang.cindex.CursorKind.DECL_REF_EXPR)
+    db.insertDefinitionNode(defloc)
+    db.insertReferenceNode(refloc, defloc)
 
 
 if __name__ == '__main__2':
