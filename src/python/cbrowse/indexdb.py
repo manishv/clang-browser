@@ -4,6 +4,7 @@ import sys
 import clang.cindex
 import storm.exceptions
 from storm.locals import *
+import storm.tracer
 
 class CursorKind(object):
     __storm_table__ = "cursorkind"
@@ -108,13 +109,6 @@ class IndexDB:
     dbtimeout = "2"
     def __init__(self, dbname):
         self.dbname  = dbname
-        self.db      = None
-        self.stormdb = None
-
-        #Variable to cache the last filename
-        self.lastfile = None
-
-    def create(self, cursorKinds):
         self.db = create_database(self.dbtype+":"+self.dbname+
                                   "?timeout="+self.dbtimeout)
     
@@ -124,13 +118,17 @@ class IndexDB:
             sys.stderr.write("Error: in accessing the database (%s)\n" %
                              self.dbname)
             sys.exit(1)
-        
+
         #Create all the unders
         self.stormdb.execute(CursorKind.createTableString())
         self.stormdb.execute(FileName.createTableString())
         self.stormdb.execute(Cursor.createTableString())
         self.stormdb.execute(DefinitionCursor.createTableString())
 
+        #Variable to cache the last filename
+        self.lastfile = None        
+
+    def initialize(self, cursorKinds):
         #Populate the data in CursorKind, if it is already not created
         try:
             results = self.stormdb.get(CursorKind, 1)
@@ -145,26 +143,25 @@ class IndexDB:
             sys.exit(1)
         return self
 
-    def getFileNameId(self, name):
+    def getFileName(self, name):
         unicodeName = unicode(name)
         result  = self.stormdb.find(FileName, FileName.name == unicodeName)
         newfile = None
-        if result.is_empty():
-            newfile = FileName(unicodeName)
-            self.stormdb.add(newfile)
-            self.stormdb.flush()
-        else:
+        if not result.is_empty():
+            assert (result.count()==1)
             newfile = result.one()
         return newfile
             
-    def getNodeKindId(self, nodeKind):
+    def getNodeKind(self, nodeKind):
         result = self.stormdb.find(CursorKind, CursorKind.value == 
                                    nodeKind.value)
         assert (not result.is_empty())
         return result.one()
 
     def getCursor(self, location):
-        fileId = self.getFileNameId(location.filename).id
+        results = self.stormdb.get(FileName, 1)
+        print "results: ", results
+        fileId = self.getFileName(location.filename).id
         print location
         result = self.stormdb.find(Cursor, 
                                     Cursor.filename_id == fileId,
@@ -172,76 +169,91 @@ class IndexDB:
                                     Cursor.start_col   == location.sc,
                                     Cursor.end_line    == location.el,
                                     Cursor.end_col     == location.ec)
-        assert (not result.is_empty())
-        for r in result:
-            print r
-        return result.one()
+        if not result.is_empty():
+            assert(result.count()==1)
+            return result.one()
+        return None
         
 class IndexDBWriter(IndexDB):
+    
+    def getOrInsertFileName(self, name):
+        result = self.getFileName(name)
+        newfile = None
+        if result == None:
+            newfile = FileName(unicode(name))
+            self.stormdb.add(newfile)
+            self.stormdb.flush()
+        else:
+            newfile = result
+        return newfile
 
     #TODO: Need to implement rollback and errorhandling
     def insertDefinitionNode(self, location):
-        fileId     = self.getFileNameId(location.filename).id
-        nodeKindId = self.getNodeKindId(location.nodekind).id
+        fileId     = self.getOrInsertFileName(location.filename).id
+        nodeKindId = self.getNodeKind(location.nodekind).id
         assert (fileId != None and nodeKindId != None)
 
-        cursor = Cursor(location, fileId, nodeKindId)
-        self.stormdb.add(cursor)
-        self.stormdb.flush()
-        defCursor = DefinitionCursor()
-        defCursor.defcursor = cursor
-        defCursor.references.add(cursor)
-        self.stormdb.flush()
-        print "Cursor.Definition %s " % cursor.definition
+        if self.getCursor(location) == None :
+            cursor = Cursor(location, fileId, nodeKindId)
+            self.stormdb.add(cursor)
+            self.stormdb.flush()
+            defCursor = DefinitionCursor()
+            defCursor.defcursor = cursor
+            defCursor.references.add(cursor)
+            self.stormdb.flush()
+            print "Cursor.Definition %s " % cursor.definition
+        else:
+            print "Cursor already present"
 
     #TODO: Need to implement rollback and errorhandling
     def insertReferenceNode(self, location, defLocation):
-        fileId     = self.getFileNameId(location.filename).id
-        nodeKindId = self.getNodeKindId(location.nodekind).id
+        fileId     = self.getOrInsertFileName(location.filename).id
+        nodeKindId = self.getNodeKind(location.nodekind).id
         assert (fileId != None and nodeKindId != None)
         
-        cursor = Cursor(location, fileId, nodeKindId)
-        self.stormdb.add(cursor)
-        self.stormdb.flush()
-        defCursor = self.getCursor(defLocation).definition
-        defCursor.references.add(cursor)
-        self.stormdb.flush()
-        print "Cursor.Definition %s " % defCursor
+        if self.getCursor(location) == None:
+            cursor = Cursor(location, fileId, nodeKindId)
+            self.stormdb.add(cursor)
+            self.stormdb.flush()
+            defCursor = self.getCursor(defLocation).definition
+            defCursor.references.add(cursor)
+            self.stormdb.flush()
+            print "Cursor.Definition %s " % defCursor
+        else:
+            print "Reference Cursor is already present"
 
 class IndexDBReader(IndexDB):
-    dbtype    = "sqlite"
-    dbtimeout = "2"
-    def __init__(self, dbname):
-        self.dbname  = dbname
-        self.db = create_database(self.dbtype+":"+self.dbname+
-                                  "?timeout="+self.dbtimeout)
-    
-        try:
-            self.stormdb = Store(self.db)
-        except storm.exceptions.StormError:
-            sys.stderr.write("Error: in accessing the database (%s)\n" %
-                             self.dbname)
-            sys.exit(1)
         
-    def getDefinitionNode(refloc):
-        self.stormdb.find
-        pass
-    def getReferenceNodes(defloc):
+    def getDefinitionNode(self, refLocation):
+        print refLocation
+        refCursor = self.getCursor(refLocation)
+        defCursor = refCursor.definition
+        return defCursor
+
+    def getReferenceNodes(self, defloc):
         pass
     
 
-__all__ = [ 'IndexDB', 'IndexDBReader', 'SymbolLocation' ]
+__all__ = [ 'IndexDB', 'IndexDBWriter', 'IndexDBReader', 'SymbolLocation' ]
 
 if __name__ == "__main__":
-    db = IndexDBWriter("/home/manish/symbols.db")
-    db.create(clang.cindex.CursorKind.get_all_kinds())
+#    storm.tracer.debug(True)
+    dbw = IndexDBWriter("/data/work/clang-browser/src/python/symbols.db")
+    dbw.initialize(clang.cindex.CursorKind.get_all_kinds())
     filename = "/data/work/clang-browser/src/hw.c"
     defloc = SymbolLocation(filename, 3, 12, 3, 5, 
                             clang.cindex.CursorKind.VAR_DECL)
     refloc = SymbolLocation(filename, 4, 12, 4, 5, 
                       clang.cindex.CursorKind.DECL_REF_EXPR)
-    db.insertDefinitionNode(defloc)
-    db.insertReferenceNode(refloc, defloc)
+    dbw.insertDefinitionNode(defloc)
+    dbw.stormdb.commit()
+    dbw.insertReferenceNode(refloc, defloc)
+    dbw.stormdb.commit()
+    del dbw
+
+    dbr = IndexDBReader("/home/manish/symbols.db")
+    cur = dbr.getDefinitionNode(refloc)
+    print "Definition Node %s for Reference Node %s" % (cur, refloc)
 
 
 if __name__ == '__main__2':
