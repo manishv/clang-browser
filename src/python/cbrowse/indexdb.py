@@ -6,8 +6,8 @@ import storm.exceptions
 from storm.locals import *
 import storm.tracer
 
-class CursorKind(object):
-    __storm_table__ = "cursorkind"
+class SymbolKind(object):
+    __storm_table__ = "symbolkind"
     id    = Int(primary=True)
     name  = Unicode()
     value = Int()
@@ -21,7 +21,7 @@ class CursorKind(object):
                                                   self.value)
     @staticmethod
     def createTableString():
-        return "CREATE TABLE IF NOT EXISTS cursorkind "\
+        return "CREATE TABLE IF NOT EXISTS symbolkind "\
             "(id INTEGER PRIMARY KEY, name VARCHAR, value INTEGER)"
 
 class FileName(object):
@@ -44,63 +44,63 @@ class FileName(object):
 SymbolLocation = collections.namedtuple('SymbolLocation', 
                                         'filename, sl, sc, el, ec, nodekind')
 
-class Cursor(Storm):
-    __storm_table__ = "cursor"
+class Symbol(Storm):
+    __storm_table__ = "symbol"
     filename_id   = Int()
     filename      = Reference(filename_id, FileName.id)
-    cursorkind_id = Int()
-    cursorkind    = Reference(cursorkind_id, CursorKind.id)
+    symbolkind_id = Int()
+    symbolkind    = Reference(symbolkind_id, SymbolKind.id)
     start_line    = Int()
     start_col    = Int()
     end_line      = Int()
     end_col      = Int()
     definition_id = Int()
-    definition = Reference(definition_id, "DefinitionCursor.id")
+    definition = Reference(definition_id, "DefinitionSymbol.id")
     id = Int(primary=True)
     
     def __init__(self, location, 
-                 filename_id=None, cursorkind_id=None):
+                 filename_id=None, symbolkind_id=None):
         self.start_line    = location.sl
         self.start_col     = location.sc
         self.end_line      = location.el
         self.end_col       = location.ec
         self.filename_id   = filename_id
-        self.cursorkind_id = cursorkind_id
+        self.symbolkind_id = symbolkind_id
 
     def __str__(self):
         return "<id : %r kind: %s filename: %s [%d:%d - %d:%d] >" % \
-            (self.id, self.cursorkind.name, self.filename.name, 
+            (self.id, self.symbolkind.name, self.filename.name, 
              self.start_line, self.start_col, 
              self.end_line, self.end_col)
 
     @staticmethod
     def createTableString():
-        return "CREATE TABLE IF NOT EXISTS cursor "\
+        return "CREATE TABLE IF NOT EXISTS symbol "\
             "(id INTEGER PRIMARY KEY, "\
-            "filename_id INTEGER, cursorkind_id INTEGER, "\
+            "filename_id INTEGER, symbolkind_id INTEGER, "\
             "definition_id INTEGER, "\
             "start_line INTEGER, start_col INTEGER, "\
             "end_line INTEGER, end_col INTEGER)"
 
-class DefinitionCursor(Storm):
-    __storm_table__ = "defcursor"
+class DefinitionSymbol(Storm):
+    __storm_table__ = "defsymbol"
     id = Int(primary=True)
-    defcursor_id = Int()
-    defcursor    = Reference(defcursor_id, Cursor.id)
-    references   = ReferenceSet(id, Cursor.definition_id)
+    defsymbol_id = Int()
+    defsymbol    = Reference(defsymbol_id, Symbol.id)
+    references   = ReferenceSet(id, Symbol.definition_id)
 
     def __init__(self):
         pass
 
     def __str__(self):
         refstr = [str(r) for r in self.references]
-        string = "< " + str(self.defcursor) + "Refs: " + ",".join(refstr) + " >"
+        string = "< " + str(self.defsymbol) + "Refs: " + ",".join(refstr) + " >"
         return string
 
     @staticmethod
     def createTableString():
-        return "CREATE TABLE IF NOT EXISTS defcursor "\
-            "(id INTEGER PRIMARY KEY, defcursor_id INTEGER)"
+        return "CREATE TABLE IF NOT EXISTS defsymbol "\
+            "(id INTEGER PRIMARY KEY, defsymbol_id INTEGER)"
                                  
 
 #TODO: We need an exception class to throw all the errors
@@ -120,21 +120,21 @@ class IndexDB:
             sys.exit(1)
 
         #Create all the unders
-        self.stormdb.execute(CursorKind.createTableString())
+        self.stormdb.execute(SymbolKind.createTableString())
         self.stormdb.execute(FileName.createTableString())
-        self.stormdb.execute(Cursor.createTableString())
-        self.stormdb.execute(DefinitionCursor.createTableString())
+        self.stormdb.execute(Symbol.createTableString())
+        self.stormdb.execute(DefinitionSymbol.createTableString())
 
         #Variable to cache the last filename
         self.lastfile = None        
 
-    def initialize(self, cursorKinds):
-        #Populate the data in CursorKind, if it is already not created
+    def initialize(self, symbolKinds):
+        #Populate the data in SymbolKind, if it is already not created
         try:
-            results = self.stormdb.get(CursorKind, 1)
+            results = self.stormdb.get(SymbolKind, 1)
             if not results:
-                for kind in cursorKinds:
-                    self.stormdb.add(CursorKind(kind.name, kind.value))
+                for kind in symbolKinds:
+                    self.stormdb.add(SymbolKind(kind.name, kind.value))
                 self.stormdb.commit()
         except storm.exceptions.StormError:
             self.stormdb.rollback()
@@ -153,22 +153,22 @@ class IndexDB:
         return newfile
             
     def getNodeKind(self, nodeKind):
-        result = self.stormdb.find(CursorKind, CursorKind.value == 
+        result = self.stormdb.find(SymbolKind, SymbolKind.value == 
                                    nodeKind.value)
         assert (not result.is_empty())
         return result.one()
 
-    def getCursor(self, location):
+    def getSymbol(self, location):
         results = self.stormdb.get(FileName, 1)
         print "results: ", results
         fileId = self.getFileName(location.filename).id
         print location
-        result = self.stormdb.find(Cursor, 
-                                    Cursor.filename_id == fileId,
-                                    Cursor.start_line  == location.sl,
-                                    Cursor.start_col   == location.sc,
-                                    Cursor.end_line    == location.el,
-                                    Cursor.end_col     == location.ec)
+        result = self.stormdb.find(Symbol, 
+                                    Symbol.filename_id == fileId,
+                                    Symbol.start_line  == location.sl,
+                                    Symbol.start_col   == location.sc,
+                                    Symbol.end_line    == location.el,
+                                    Symbol.end_col     == location.ec)
         if not result.is_empty():
             assert(result.count()==1)
             return result.one()
@@ -193,17 +193,17 @@ class IndexDBWriter(IndexDB):
         nodeKindId = self.getNodeKind(location.nodekind).id
         assert (fileId != None and nodeKindId != None)
 
-        if self.getCursor(location) == None :
-            cursor = Cursor(location, fileId, nodeKindId)
-            self.stormdb.add(cursor)
+        if self.getSymbol(location) == None :
+            symbol = Symbol(location, fileId, nodeKindId)
+            self.stormdb.add(symbol)
             self.stormdb.flush()
-            defCursor = DefinitionCursor()
-            defCursor.defcursor = cursor
-            defCursor.references.add(cursor)
+            defSymbol = DefinitionSymbol()
+            defSymbol.defsymbol = symbol
+            defSymbol.references.add(symbol)
             self.stormdb.flush()
-            print "Cursor.Definition %s " % cursor.definition
+            print "Symbol.Definition %s " % symbol.definition
         else:
-            print "Cursor already present"
+            print "Symbol already present"
 
     #TODO: Need to implement rollback and errorhandling
     def insertReferenceNode(self, location, defLocation):
@@ -211,24 +211,24 @@ class IndexDBWriter(IndexDB):
         nodeKindId = self.getNodeKind(location.nodekind).id
         assert (fileId != None and nodeKindId != None)
         
-        if self.getCursor(location) == None:
-            cursor = Cursor(location, fileId, nodeKindId)
-            self.stormdb.add(cursor)
+        if self.getSymbol(location) == None:
+            symbol = Symbol(location, fileId, nodeKindId)
+            self.stormdb.add(symbol)
             self.stormdb.flush()
-            defCursor = self.getCursor(defLocation).definition
-            defCursor.references.add(cursor)
+            defSymbol = self.getSymbol(defLocation).definition
+            defSymbol.references.add(symbol)
             self.stormdb.flush()
-            print "Cursor.Definition %s " % defCursor
+            print "Symbol.Definition %s " % defSymbol
         else:
-            print "Reference Cursor is already present"
+            print "Reference Symbol is already present"
 
 class IndexDBReader(IndexDB):
         
     def getDefinitionNode(self, refLocation):
         print refLocation
-        refCursor = self.getCursor(refLocation)
-        defCursor = refCursor.definition
-        return defCursor
+        refSymbol = self.getSymbol(refLocation)
+        defSymbol = refSymbol.definition
+        return defSymbol
 
     def getReferenceNodes(self, defloc):
         pass
@@ -238,7 +238,8 @@ __all__ = [ 'IndexDB', 'IndexDBWriter', 'IndexDBReader', 'SymbolLocation' ]
 
 if __name__ == "__main__":
 #    storm.tracer.debug(True)
-    dbw = IndexDBWriter("/data/work/clang-browser/src/python/symbols.db")
+    dbName = "/data/work/clang-browser/src/python/symbols.db"
+    dbw = IndexDBWriter(dbName)
     dbw.initialize(clang.cindex.CursorKind.get_all_kinds())
     filename = "/data/work/clang-browser/src/hw.c"
     defloc = SymbolLocation(filename, 3, 12, 3, 5, 
@@ -251,29 +252,29 @@ if __name__ == "__main__":
     dbw.stormdb.commit()
     del dbw
 
-    dbr = IndexDBReader("/home/manish/symbols.db")
+    dbr = IndexDBReader(dbName)
     cur = dbr.getDefinitionNode(refloc)
     print "Definition Node %s for Reference Node %s" % (cur, refloc)
 
 
 if __name__ == '__main__2':
-    print CursorKind.createTableString()
+    print SymbolKind.createTableString()
     print FileName.createTableString()
-    print Cursor.createTableString()
+    print Symbol.createTableString()
 
     db = create_database("sqlite:/home/manish/symboldb.db")
     store = Store(db)
     
-    #Create CursorKind Table and populate with Clang CursorKinds
-    store.execute(CursorKind.createTableString())
-    for kind in clang.cindex.CursorKind.get_all_kinds():
+    #Create SymbolKind Table and populate with Clang SymbolKinds
+    store.execute(SymbolKind.createTableString())
+    for kind in clang.cindex.SymbolKind.get_all_kinds():
         print kind
-        ck = CursorKind(kind.name, kind.value)
+        ck = SymbolKind(kind.name, kind.value)
         store.add(ck)
         store.flush()
         print "%r %s %d" % (ck.id, ck.name, ck.value)
 
-    ck = store.find(CursorKind, CursorKind.value == 500).one()
+    ck = store.find(SymbolKind, SymbolKind.value == 500).one()
     print ck
 
     #Add hw.c as a dummy file
@@ -287,30 +288,30 @@ if __name__ == '__main__2':
                           u"/data/work/clang-browser/src/hw.c").one()
     print filename.name
 
-    #Create Cursor table and fill with some dummy data
-    store.execute(Cursor.createTableString())
-    c1 = Cursor(Location(filename.name, 3, 12, 3, 5), 1, 9)
-    c2 = Cursor(Location(filename.name, 4, 12, 4, 5), 1, 9)
+    #Create Symbol table and fill with some dummy data
+    store.execute(Symbol.createTableString())
+    c1 = Symbol(Location(filename.name, 3, 12, 3, 5), 1, 9)
+    c2 = Symbol(Location(filename.name, 4, 12, 4, 5), 1, 9)
     store.add(c1)
     store.add(c2)
     store.flush()
 
-    store.execute(DefinitionCursor.createTableString())
-    dc = DefinitionCursor()
-    dc.defcursor = c1
+    store.execute(DefinitionSymbol.createTableString())
+    dc = DefinitionSymbol()
+    dc.defsymbol = c1
     dc.references.add(c1)
     dc.references.add(c2)
     store.add(dc)
     store.flush()
     print "DC"
-    print dc.defcursor
+    print dc.defsymbol
     print dc.references.count()
     for r in dc.references:
         print r
     
     del dc
-    dc = store.get(DefinitionCursor, 1)
-    print dc.defcursor
+    dc = store.get(DefinitionSymbol, 1)
+    print dc.defsymbol
     print dc.references.count()
     for r in dc.references:
         print r
