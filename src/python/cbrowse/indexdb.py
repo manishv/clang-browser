@@ -160,9 +160,7 @@ class IndexDB:
 
     def getSymbol(self, location):
         results = self.stormdb.get(FileName, 1)
-        print "results: ", results
         fileId = self.getFileName(location.filename).id
-        print location
         result = self.stormdb.find(Symbol, 
                                     Symbol.filename_id == fileId,
                                     Symbol.start_line  == location.sl,
@@ -193,7 +191,8 @@ class IndexDBWriter(IndexDB):
         nodeKindId = self.getNodeKind(location.nodekind).id
         assert (fileId != None and nodeKindId != None)
 
-        if self.getSymbol(location) == None :
+        symbol = self.getSymbol(location)
+        if symbol == None :
             symbol = Symbol(location, fileId, nodeKindId)
             self.stormdb.add(symbol)
             self.stormdb.flush()
@@ -201,9 +200,7 @@ class IndexDBWriter(IndexDB):
             defSymbol.defsymbol = symbol
             defSymbol.references.add(symbol)
             self.stormdb.flush()
-            print "Symbol.Definition %s " % symbol.definition
-        else:
-            print "Symbol already present"
+        return symbol
 
     #TODO: Need to implement rollback and errorhandling
     def insertReferenceNode(self, location, defLocation):
@@ -211,27 +208,35 @@ class IndexDBWriter(IndexDB):
         nodeKindId = self.getNodeKind(location.nodekind).id
         assert (fileId != None and nodeKindId != None)
         
-        if self.getSymbol(location) == None:
+        symbol = self.getSymbol(location)
+        if symbol == None:
             symbol = Symbol(location, fileId, nodeKindId)
             self.stormdb.add(symbol)
             self.stormdb.flush()
             defSymbol = self.getSymbol(defLocation).definition
             defSymbol.references.add(symbol)
             self.stormdb.flush()
-            print "Symbol.Definition %s " % defSymbol
-        else:
-            print "Reference Symbol is already present"
+        return symbol
 
 class IndexDBReader(IndexDB):
         
     def getDefinitionNode(self, refLocation):
-        print refLocation
         refSymbol = self.getSymbol(refLocation)
-        defSymbol = refSymbol.definition
-        return defSymbol
+        if refSymbol != None:
+            defSymbol = refSymbol.definition
+            return defSymbol
+        sys.stderr.write("Error: Symbol not found (%s)" % refLocation)
+        return None
 
-    def getReferenceNodes(self, defloc):
-        pass
+    def getReferenceNodes(self, defLocation):
+        symbol = self.getSymbol(defLocation)
+        if symbol != None:
+            defSymbol = symbol.definition
+            assert (defSymbol!=None)
+            return defSymbol.references
+
+        sys.stderr.write("Error: Symbol not found (%s) " % defLocation)
+        return None
     
 
 __all__ = [ 'IndexDB', 'IndexDBWriter', 'IndexDBReader', 'SymbolLocation' ]
@@ -256,6 +261,8 @@ if __name__ == "__main__":
     cur = dbr.getDefinitionNode(refloc)
     print "Definition Node %s for Reference Node %s" % (cur, refloc)
 
+    cur = dbr.getReferenceNodes(defloc)
+    print "References (%s) " % cur
 
 if __name__ == '__main__2':
     print SymbolKind.createTableString()
