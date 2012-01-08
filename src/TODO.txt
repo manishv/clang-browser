@@ -1,0 +1,11 @@
+DONE: Clean up all the debugging based print statements in indexdb.py
+DONE: We need a way to read and browse the database
+cbrowse/indexdb.py:#TODO: We need an exception class to throw all the errors
+cbrowse/indexdb.py:    #TODO: Need to implement rollback and errorhandling
+TODO: Need to add functions to located definition
+TODO: Add more tests for the functionality that has been implemented
+TODO: Use figleaf to code coverage
+TODO: Use pylint to check the code
+TODO: Install buildbot
+TODO: Try nose for unit testing	
+TODO: Add performance testing using pyunitperf
