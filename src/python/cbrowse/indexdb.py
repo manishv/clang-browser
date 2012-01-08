@@ -238,6 +238,14 @@ class IndexDBReader(IndexDB):
         sys.stderr.write("Error: Symbol not found (%s) " % defLocation)
         return None
     
+#TODO: Decide how does the API returns SymbolLocation 
+def getSymbolLocation(symbol):
+    return SymbolLocation(symbol.filename.name, 
+                          symbol.start_line,
+                          symbol.start_col,
+                          symbol.end_line,
+                          symbol.end_col,
+                          symbol.symbolkind.name)
 
 __all__ = [ 'IndexDB', 'IndexDBWriter', 'IndexDBReader', 'SymbolLocation' ]
 
@@ -261,8 +269,11 @@ if __name__ == "__main__":
     cur = dbr.getDefinitionNode(refloc)
     print "Definition Node %s for Reference Node %s" % (cur, refloc)
 
-    cur = dbr.getReferenceNodes(defloc)
-    print "References (%s) " % cur
+    ref = dbr.getReferenceNodes(defloc)
+    for r in ref:
+        print "Reference (%s) " % r
+        print getSymbolLocation(r)
+        
 
 if __name__ == '__main__2':
     print SymbolKind.createTableString()
