@@ -143,6 +143,9 @@ class IndexDB:
             sys.exit(1)
         return self
 
+    def commit(self):
+        self.stormdb.commit()
+
     def getFileName(self, name):
         unicodeName = unicode(name)
         result  = self.stormdb.find(FileName, FileName.name == unicodeName)
@@ -159,8 +162,9 @@ class IndexDB:
         return result.one()
 
     def getSymbol(self, location):
-        results = self.stormdb.get(FileName, 1)
-        fileId = self.getFileName(location.filename).id
+        fileClass = self.getFileName(location.filename)
+        assert(fileClass != None)
+        fileId = fileClass.id
         result = self.stormdb.find(Symbol, 
                                     Symbol.filename_id == fileId,
                                     Symbol.start_line  == location.sl,
@@ -260,14 +264,17 @@ if __name__ == "__main__":
     refloc = SymbolLocation(filename, 4, 12, 4, 5, 
                       clang.cindex.CursorKind.DECL_REF_EXPR)
     dbw.insertDefinitionNode(defloc)
-    dbw.stormdb.commit()
+    dbw.stormdb.commit()  #Why do someneed to commit
+    #what is the difference between commit and flush
     dbw.insertReferenceNode(refloc, defloc)
     dbw.stormdb.commit()
     del dbw
 
+    refloc2 = SymbolLocation(filename, 4, 12, 4, 5, 
+                             clang.cindex.CursorKind.DECL_REF_EXPR)
     dbr = IndexDBReader(dbName)
-    cur = dbr.getDefinitionNode(refloc)
-    print "Definition Node %s for Reference Node %s" % (cur, refloc)
+    cur = dbr.getDefinitionNode(refloc2)
+    print "Definition Node %s for Reference Node %s" % (cur, refloc2)
 
     ref = dbr.getReferenceNodes(defloc)
     for r in ref:
