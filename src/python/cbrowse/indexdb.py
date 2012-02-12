@@ -1,4 +1,3 @@
-import collections
 import sys
 
 import clang.cindex
@@ -24,6 +23,8 @@ class SymbolKind(object):
         return "CREATE TABLE IF NOT EXISTS symbolkind "\
             "(id INTEGER PRIMARY KEY, name VARCHAR, value INTEGER)"
 
+DEFAULT_SYMBOLKIND = SymbolKind("DEFAULT_SYMBOLKIND", 0)
+
 class FileName(object):
     __storm_table__ = "filename"
     id = Int(primary=True)
@@ -41,9 +42,18 @@ class FileName(object):
         return "CREATE TABLE IF NOT EXISTS filename "\
             "(id INTEGER PRIMARY KEY, name VARCHAR)"
 
-SymbolLocation = collections.namedtuple('SymbolLocation',
-                                        'filename, sl, sc, el, ec, nodekind')
-
+class SymbolLocation:
+    def __init__(self, filename, sl, sc, el, ec, nodekind=DEFAULT_SYMBOLKIND):
+        self.filename = filename
+        self.sl = sl
+        self.sc = sc
+        self.el = el
+        self.ec = ec
+        self.nodekind = nodekind
+    def __str__(self):
+        return "< filename: %r sl: %r sc: %r el: %r ec: %r nodekind: %r >" % \
+            (self.filename, self.sl, self.sc, self.el, self.ec, self.nodekind)
+        
 class Symbol(Storm):
     __storm_table__ = "symbol"
     filename_id   = Int()
@@ -130,9 +140,11 @@ class IndexDB:
 
     def initialize(self, symbolKinds):
         #Populate the data in SymbolKind, if it is already not created
+        global DEFAULT_SYMBOLKIND
         try:
             results = self.stormdb.get(SymbolKind, 1)
             if not results:
+                self.stormdb.add(DEFAULT_SYMBOLKIND)
                 for kind in symbolKinds:
                     self.stormdb.add(SymbolKind(kind.name, kind.value))
                 self.stormdb.commit()
