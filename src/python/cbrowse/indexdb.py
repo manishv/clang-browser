@@ -11,13 +11,13 @@ class SymbolKind(object):
     id    = Int(primary=True)
     name  = Unicode()
     value = Int()
-    
+
     def __init__(self, name, value):
         self.name  = unicode(name)
         self.value = value
-    
+
     def __str__(self):
-        return "< id: %r name: %r value: %d >" % (self.id, self.name, 
+        return "< id: %r name: %r value: %d >" % (self.id, self.name,
                                                   self.value)
     @staticmethod
     def createTableString():
@@ -28,20 +28,20 @@ class FileName(object):
     __storm_table__ = "filename"
     id = Int(primary=True)
     name = Unicode()
-    
+
     def __init__(self, filename):
         assert (filename != None)
         self.name = unicode(filename)
-    
+
     def __str__(self):
         return "< id: %r filename: %r >" % (self.id, self.name)
-    
+
     @staticmethod
     def createTableString():
         return "CREATE TABLE IF NOT EXISTS filename "\
             "(id INTEGER PRIMARY KEY, name VARCHAR)"
 
-SymbolLocation = collections.namedtuple('SymbolLocation', 
+SymbolLocation = collections.namedtuple('SymbolLocation',
                                         'filename, sl, sc, el, ec, nodekind')
 
 class Symbol(Storm):
@@ -57,8 +57,8 @@ class Symbol(Storm):
     definition_id = Int()
     definition = Reference(definition_id, "DefinitionSymbol.id")
     id = Int(primary=True)
-    
-    def __init__(self, location, 
+
+    def __init__(self, location,
                  filename_id=None, symbolkind_id=None):
         self.start_line    = location.sl
         self.start_col     = location.sc
@@ -69,8 +69,8 @@ class Symbol(Storm):
 
     def __str__(self):
         return "<id : %r kind: %s filename: %s [%d:%d - %d:%d] >" % \
-            (self.id, self.symbolkind.name, self.filename.name, 
-             self.start_line, self.start_col, 
+            (self.id, self.symbolkind.name, self.filename.name,
+             self.start_line, self.start_col,
              self.end_line, self.end_col)
 
     @staticmethod
@@ -101,7 +101,7 @@ class DefinitionSymbol(Storm):
     def createTableString():
         return "CREATE TABLE IF NOT EXISTS defsymbol "\
             "(id INTEGER PRIMARY KEY, defsymbol_id INTEGER)"
-                                 
+
 
 #TODO: We need an exception class to throw all the errors
 class IndexDB:
@@ -111,7 +111,7 @@ class IndexDB:
         self.dbname  = dbname
         self.db = create_database(self.dbtype+":"+self.dbname+
                                   "?timeout="+self.dbtimeout)
-    
+
         try:
             self.stormdb = Store(self.db)
         except storm.exceptions.StormError:
@@ -126,7 +126,7 @@ class IndexDB:
         self.stormdb.execute(DefinitionSymbol.createTableString())
 
         #Variable to cache the last filename
-        self.lastfile = None        
+        self.lastfile = None
 
     def initialize(self, symbolKinds):
         #Populate the data in SymbolKind, if it is already not created
@@ -138,7 +138,7 @@ class IndexDB:
                 self.stormdb.commit()
         except storm.exceptions.StormError:
             self.stormdb.rollback()
-            sys.stderr.write("Error: writing to the database (%s)\n" % 
+            sys.stderr.write("Error: writing to the database (%s)\n" %
                              self.dbname)
             sys.exit(1)
         return self
@@ -154,9 +154,9 @@ class IndexDB:
             assert (result.count()==1)
             newfile = result.one()
         return newfile
-            
+
     def getNodeKind(self, nodeKind):
-        result = self.stormdb.find(SymbolKind, SymbolKind.value == 
+        result = self.stormdb.find(SymbolKind, SymbolKind.value ==
                                    nodeKind.value)
         assert (not result.is_empty())
         return result.one()
@@ -165,7 +165,7 @@ class IndexDB:
         fileClass = self.getFileName(location.filename)
         assert(fileClass != None)
         fileId = fileClass.id
-        result = self.stormdb.find(Symbol, 
+        result = self.stormdb.find(Symbol,
                                     Symbol.filename_id == fileId,
                                     Symbol.start_line  == location.sl,
                                     Symbol.start_col   == location.sc,
@@ -175,9 +175,9 @@ class IndexDB:
             assert(result.count()==1)
             return result.one()
         return None
-        
+
 class IndexDBWriter(IndexDB):
-    
+
     def getOrInsertFileName(self, name):
         result = self.getFileName(name)
         newfile = None
@@ -211,7 +211,7 @@ class IndexDBWriter(IndexDB):
         fileId     = self.getOrInsertFileName(location.filename).id
         nodeKindId = self.getNodeKind(location.nodekind).id
         assert (fileId != None and nodeKindId != None)
-        
+
         symbol = self.getSymbol(location)
         if symbol == None:
             symbol = Symbol(location, fileId, nodeKindId)
@@ -223,7 +223,7 @@ class IndexDBWriter(IndexDB):
         return symbol
 
 class IndexDBReader(IndexDB):
-        
+
     def getDefinitionNode(self, refLocation):
         refSymbol = self.getSymbol(refLocation)
         if refSymbol != None:
@@ -241,10 +241,10 @@ class IndexDBReader(IndexDB):
 
         sys.stderr.write("Error: Symbol not found (%s) " % defLocation)
         return None
-    
-#TODO: Decide how does the API returns SymbolLocation 
+
+#TODO: Decide how does the API returns SymbolLocation
 def getSymbolLocation(symbol):
-    return SymbolLocation(symbol.filename.name, 
+    return SymbolLocation(symbol.filename.name,
                           symbol.start_line,
                           symbol.start_col,
                           symbol.end_line,
@@ -259,9 +259,9 @@ if __name__ == "__main__":
     dbw = IndexDBWriter(dbName)
     dbw.initialize(clang.cindex.CursorKind.get_all_kinds())
     filename = "/data/work/clang-browser/src/hw.c"
-    defloc = SymbolLocation(filename, 3, 12, 3, 5, 
+    defloc = SymbolLocation(filename, 3, 12, 3, 5,
                             clang.cindex.CursorKind.VAR_DECL)
-    refloc = SymbolLocation(filename, 4, 12, 4, 5, 
+    refloc = SymbolLocation(filename, 4, 12, 4, 5,
                       clang.cindex.CursorKind.DECL_REF_EXPR)
     dbw.insertDefinitionNode(defloc)
     dbw.stormdb.commit()  #Why do someneed to commit
@@ -270,7 +270,7 @@ if __name__ == "__main__":
     dbw.stormdb.commit()
     del dbw
 
-    refloc2 = SymbolLocation(filename, 4, 12, 4, 5, 
+    refloc2 = SymbolLocation(filename, 4, 12, 4, 5,
                              clang.cindex.CursorKind.DECL_REF_EXPR)
     dbr = IndexDBReader(dbName)
     cur = dbr.getDefinitionNode(refloc2)
@@ -280,7 +280,7 @@ if __name__ == "__main__":
     for r in ref:
         print "Reference (%s) " % r
         print getSymbolLocation(r)
-        
+
 
 if __name__ == '__main__2':
     print SymbolKind.createTableString()
@@ -289,7 +289,7 @@ if __name__ == '__main__2':
 
     db = create_database("sqlite:/home/manish/symboldb.db")
     store = Store(db)
-    
+
     #Create SymbolKind Table and populate with Clang SymbolKinds
     store.execute(SymbolKind.createTableString())
     for kind in clang.cindex.SymbolKind.get_all_kinds():
@@ -309,7 +309,7 @@ if __name__ == '__main__2':
     store.flush()
     print fl
 
-    filename = store.find(FileName, FileName.name == 
+    filename = store.find(FileName, FileName.name ==
                           u"/data/work/clang-browser/src/hw.c").one()
     print filename.name
 
@@ -333,14 +333,14 @@ if __name__ == '__main__2':
     print dc.references.count()
     for r in dc.references:
         print r
-    
+
     del dc
     dc = store.get(DefinitionSymbol, 1)
     print dc.defsymbol
     print dc.references.count()
     for r in dc.references:
         print r
-    
+
 
     store.commit()
     del store
