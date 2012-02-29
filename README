@@ -1,9 +1,9 @@
--*- org -*-
-
-* clang-browser
+clang-browser
+=============
 clang-browser allows syntactically aware browsing of the C/C++ code. Under the
 hood it uses clang's python bindings and Canonical's ORM called Storm.
 
-* Status
+Status
+------
 The project is still in pre-alpha stage, but is actively being maintained.
 
