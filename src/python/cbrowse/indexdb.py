@@ -54,6 +54,8 @@ class SymbolLocation:
     def __eq__(self, other):
         if type(other) == types.NoneType:
             return False
+        if not isinstance(other, SymbolLocation):
+            return False
         return self.filename == other.filename and\
             self.sl       == other.sl and\
             self.sc       == other.sc and\
