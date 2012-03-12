@@ -1,4 +1,4 @@
-import sys
+import sys, types
 
 import clang.cindex
 import storm.exceptions
@@ -50,6 +50,20 @@ class SymbolLocation:
         self.el = el
         self.ec = ec
         self.nodekind = nodekind
+
+    def __eq__(self, other):
+        if type(other) == types.NoneType:
+            return False
+        return self.filename == other.filename and\
+            self.sl       == other.sl and\
+            self.sc       == other.sc and\
+            self.el       == other.el and\
+            self.ec       == other.ec and\
+            self.nodekind == other.nodekind
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __str__(self):
         return "< filename: %r sl: %r sc: %r el: %r ec: %r nodekind: %r >" % \
             (self.filename, self.sl, self.sc, self.el, self.ec, self.nodekind)
