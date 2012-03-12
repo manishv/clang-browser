@@ -98,7 +98,12 @@ def optParser():
     if len(args) == 0:
         parser.error('Invalid number of arguments')
 
+    if not os.path.exists(args[0]):
+        sys.stderr.write("Error: source file %s does not exist" % args[0])
+
     return (opts, args)
+
+__all__ = ['Indexer']
 
 def main():
     (opts, args) = optParser()
