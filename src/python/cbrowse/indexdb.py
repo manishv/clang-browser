@@ -16,7 +16,7 @@ class SymbolKind(object):
         self.value = value
 
     def __str__(self):
-        return "< id: %r name: %r value: %d >" % (self.id, self.name,
+        return "< id: %s name: %s value: %d >" % (self.id, self.name,
                                                   self.value)
     @staticmethod
     def createTableString():
@@ -35,7 +35,7 @@ class FileName(object):
         self.name = unicode(filename)
 
     def __str__(self):
-        return "< id: %r filename: %r >" % (self.id, self.name)
+        return "< id: %s filename: %s >" % (self.id, self.name)
 
     @staticmethod
     def createTableString():
@@ -43,6 +43,7 @@ class FileName(object):
             "(id INTEGER PRIMARY KEY, name VARCHAR)"
 
 class SymbolLocation:
+    global DEFAULT_SYMBOLKIND
     def __init__(self, filename, sl, sc, el, ec, nodekind=DEFAULT_SYMBOLKIND):
         self.filename = filename
         self.sl = sl
@@ -67,7 +68,7 @@ class SymbolLocation:
         return not self.__eq__(other)
 
     def __str__(self):
-        return "< filename: %r sl: %r sc: %r el: %r ec: %r nodekind: %r >" % \
+        return "< filename: %s sl: %s sc: %s el: %s ec: %s nodekind: %s >" % \
             (self.filename, self.sl, self.sc, self.el, self.ec, self.nodekind)
         
 class Symbol(Storm):
