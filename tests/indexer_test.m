@@ -1,0 +1,6 @@
+// RUN: python indexer_test.py %s | FileCheck %s
+
+//CHECK: SymbolLocation:  < filename: /data/work/clang-browser/tests/indexer_test.c sl: 8 sc: 5 el: 8 ec: 12 nodekind: < id: 1 name: DEFAULT_SYMBOLKIND value: 0 > >
+//CHECK: Definition Node < <id : 537 kind: VAR_DECL filename: /data/work/clang-browser/tests/indexer_test.c [8:5 - 8:12] >Refs: <id : 537 kind: VAR_DECL filename: /data/work/clang-browser/tests/indexer_test.c [8:5 - 8:12] >,<id : 538 kind: DECL_REF_EXPR filename: /data/work/clang-browser/tests/indexer_test.c [9:5 - 9:6] >,<id : 541 kind: DECL_REF_EXPR filename: /data/work/clang-browser/tests/indexer_test.c [11:12 - 11:13] >,<id : 544 kind: DECL_REF_EXPR filename: /data/work/clang-browser/tests/indexer_test.c [9:11 - 9:12] > >
+//CHECK:  Symbol < filename: /data/work/clang-browser/tests/indexer_test.c sl: 9 sc: 7 el: 9 ec: 13 nodekind: < id: 1 name: DEFAULT_SYMBOLKIND value: 0 > >
+//CHECK: Definition Node  < <id : 194 kind: FUNCTION_DECL filename: /data/work/clang-browser/tests/indexer_test.c [3:1 - 6:2] >Refs: <id : 194 kind: FUNCTION_DECL filename: /data/work/clang-browser/tests/indexer_test.c [3:1 - 6:2] >,<id : 539 kind: CALL_EXPR filename: /data/work/clang-browser/tests/indexer_test.c [9:7 - 9:13] >,<id : 543 kind: DECL_REF_EXPR filename: /data/work/clang-browser/tests/indexer_test.c [9:7 - 9:10] > >
