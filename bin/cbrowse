@@ -1,3 +1,31 @@
-#!/bin/bash
+#!/usr/bin/env python
 
-echo $*
+import os
+import optparse
+
+#import cbrowse.indexer
+#import clang.cindex
+
+DEFAULT_DBNAME="symbols.db"
+
+def argParser():
+    global DEFAULT_DBNAME
+    parser = optparse.OptionParser("Usage: cbrowser [options]")
+    parser.add_option("-b", action="store_true", dest="build", default=False,
+                        help="Build the index databaes")
+    parser.add_option("-o", "", dest="database", #default=DEFAULT_DBNAME,
+                      help="Name of index database (default: %s)" % 
+                      DEFAULT_DBNAME)
+    parser.disable_interspersed_args()
+
+    (opts, args) = parser.parse_args()
+    if opts.database == None:
+        opts.database = os.environ.get("CBROWSE_DATABASE", DEFAULT_DBNAME)
+
+    return (opts, args)
+
+def main():
+    (opts, args) = argParser()
+
+if __name__ == '__main__':
+    main()
