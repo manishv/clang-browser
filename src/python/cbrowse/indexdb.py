@@ -100,6 +100,12 @@ class Symbol(Storm):
              self.start_line, self.start_col,
              self.end_line, self.end_col)
 
+    def getLocation(self):
+        return SymbolLocation(self.filename.name,
+                              self.start_line, self.start_col,
+                              self.end_line, self.end_col,
+                              self.symbolkind.name)
+
     @staticmethod
     def createTableString():
         return "CREATE TABLE IF NOT EXISTS symbol "\
@@ -123,6 +129,9 @@ class DefinitionSymbol(Storm):
         refstr = [str(r) for r in self.references]
         string = "< " + str(self.defsymbol) + "Refs: " + ",".join(refstr) + " >"
         return string
+
+    def getLocation(self):
+        return self.defsymbol.getLocation()
 
     @staticmethod
     def createTableString():

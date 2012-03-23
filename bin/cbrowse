@@ -16,7 +16,6 @@ def buildIndexDatabase(indexer, filename, args):
     indexer.index(filename, args)
 
 def createSymbol(args):
-    print args
     try:
         loc = cbrowse.indexdb.SymbolLocation(args[0], int(args[1]), 
                                              int(args[2]),
@@ -75,8 +74,8 @@ def getDefinition(dbReader, loc):
     print "Definition Node: ", defNode
 
 def getReferences(dbReader, loc):
-    defNode = getDefinition(dbReader, loc)
-    refNodes = dbReader.getReferences(defNode.getLocation())
+    defNode = dbReader.getDefinitionNode(loc)
+    refNodes = dbReader.getReferenceNodes(defNode.getLocation())
     print "Reference Nodes: "
     for r in refNodes:
         print r
