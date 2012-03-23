@@ -1,5 +1,4 @@
-DONE: Clean up all the debugging based print statements in indexdb.py
-DONE: We need a way to read and browse the database
+TODO: Insert isinstance assert in functions to check if the correct objects are being passed.
 cbrowse/indexdb.py:#TODO: We need an exception class to throw all the errors
 cbrowse/indexdb.py:    #TODO: Need to implement rollback and errorhandling
 TODO: Need to add functions to located definition
@@ -9,3 +8,5 @@ TODO: Use pylint to check the code
 TODO: Install buildbot
 TODO: Try nose for unit testing	
 TODO: Add performance testing using pyunitperf
+DONE: Clean up all the debugging based print statements in indexdb.py
+DONE: We need a way to read and browse the database
