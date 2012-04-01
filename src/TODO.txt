@@ -1,3 +1,4 @@
+TODO: Fill in the help return string.
 TODO: Insert isinstance assert in functions to check if the correct objects are being passed.
 cbrowse/indexdb.py:#TODO: We need an exception class to throw all the errors
 cbrowse/indexdb.py:    #TODO: Need to implement rollback and errorhandling
