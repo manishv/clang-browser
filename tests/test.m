@@ -1,3 +1,9 @@
-// RUN: cbrowse %s | FileCheck %s
+// RUN: cbrowse --help | FileCheck %s
 
-// CHECK: /data/work/clang-browser/tests/test.m
+// CHECK: Usage: cbrowse [options] <cmd> <cmd_args> 
+// CHECK: Help...
+
+//CHECK: Options:
+//CHECK:  -h, --help         show this help message and exit
+//CHECK:  --dbname=DATABASE  Name of index database (default: symbols.db)
+
