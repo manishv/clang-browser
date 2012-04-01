@@ -229,6 +229,7 @@ class IndexDBWriter(IndexDB):
 
     #TODO: Need to implement rollback and errorhandling
     def insertDefinitionNode(self, location):
+        assert isinstance(location, SymbolLocation)
         fileId     = self.getOrInsertFileName(location.filename).id
         nodeKindId = self.getNodeKind(location.nodekind).id
         assert (fileId != None and nodeKindId != None)
@@ -246,6 +247,9 @@ class IndexDBWriter(IndexDB):
 
     #TODO: Need to implement rollback and errorhandling
     def insertReferenceNode(self, location, defLocation):
+        assert isinstance(location, SymbolLocation)
+        assert isinstance(defLocation, SymbolLocation)
+
         fileId     = self.getOrInsertFileName(location.filename).id
         nodeKindId = self.getNodeKind(location.nodekind).id
         assert (fileId != None and nodeKindId != None)
@@ -263,6 +267,8 @@ class IndexDBWriter(IndexDB):
 class IndexDBReader(IndexDB):
 
     def getDefinitionNode(self, refLocation):
+        assert isinstance(refLocation, SymbolLocation)
+
         refSymbol = self.getSymbol(refLocation)
         if refSymbol != None:
             defSymbol = refSymbol.definition
@@ -271,6 +277,8 @@ class IndexDBReader(IndexDB):
         return None
 
     def getReferenceNodes(self, defLocation):
+        assert isinstance(defLocation, SymbolLocation)
+        
         symbol = self.getSymbol(defLocation)
         if symbol != None:
             defSymbol = symbol.definition
