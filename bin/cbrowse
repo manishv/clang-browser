@@ -30,7 +30,11 @@ def createSymbol(args):
         
 
 def helpString():
-    s = "Help..."
+    s  = "available commands are: \n"
+    s += "   build: builds the index database \n"
+    s += "   find-def: find the definition \n"
+    s += "   find-ref: find all references to the symbol \n"
+    
     return s
 
 def parseCmd(args):
