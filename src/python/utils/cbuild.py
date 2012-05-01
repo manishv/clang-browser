@@ -5,7 +5,7 @@ import os, sys
 
 def getIndexerScript():
     curPath = os.path.dirname(os.path.realpath(__file__))
-    indexerPath = os.path.join(curPath, "cbrowse")
+    indexerPath = os.path.join(curPath, "codebrowse.py")
     print indexerPath
     if not os.path.exists(indexerPath):
         sys.stderr.write("Unable to find indexer script at %s\n" % indexerPath)
@@ -46,6 +46,7 @@ def collectArgs(argsList):
 
     return (remArgsList, filesList)
 
+import codebrowse
 def main():
     (args, files) = collectArgs(sys.argv[1:])
     indexerScript = getIndexerScript()
