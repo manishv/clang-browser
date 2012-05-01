@@ -1,0 +1,11 @@
+#!/bin/bash
+
+ROOTDIR=/data/work/clang-browser
+CLANG_PYTHON_DIR=/data/work/LLVM/llvm-src/tools/clang/bindings/python
+LLVM_INSTALL_DIR=/data/work/LLVM/llvm-rel
+
+export PYTHONPATH=$PYTHONPATH:$ROOTDIR/src/python
+export PYTHONPATH=$PYTHONPATH:$CLANG_PYTHON_DIR
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LLVM_INSTALL_DIR/lib
+
+python $ROOTDIR/src/python/utils/cbuild.py $*
