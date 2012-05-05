@@ -11,6 +11,9 @@ def unexposedKind(kind):
         kind == CursorKind.UNEXPOSED_STMT or \
         kind == CursorKind.UNEXPOSED_ATTR
 
+def unhandledKind(kind):
+    return kind in [CursorKind.USING_DECLARATION]
+
 class Indexer:
     def __init__(self, DBName=DEFAULT_DBNAME):
         self.indexDB    = IndexDBWriter(os.path.abspath(DBName))
@@ -40,7 +43,8 @@ class Indexer:
 
     def insertNode(self, node):        
         kind = node.kind
-        if kind.is_invalid() or unexposedKind(kind):
+        if kind.is_invalid() or unexposedKind(kind) or \
+                unhandledKind(kind) :
             return
 
         nodeLoc = self.createNode(node)
