@@ -2,6 +2,8 @@
 #-*- python -*-
 
 import os, sys
+import cbrowse.indexer
+import codebrowse
 
 def getIndexerScript():
     curPath = os.path.dirname(os.path.realpath(__file__))
@@ -46,17 +48,22 @@ def collectArgs(argsList):
 
     return (remArgsList, filesList)
 
-import codebrowse
+def buildIndexDatabase(dbName, files, args):
+    indexer = cbrowse.indexer.Indexer(dbName)
+    for f in files:
+        codebrowse.buildIndexDatabase(indexer, f, args)
+
+
 def main():
     (args, files) = collectArgs(sys.argv[1:])
     indexerScript = getIndexerScript()
     checkOrSetEnvVariable()
 
-    print os.environ.get("CBROWSE_DATABASE")
-    print args
-    print files
+    dbName = os.environ.get("CBROWSE_DATABASE")
     if not files:
-        print "dont call cbrowse"
+        print "No source files found"
+        return
+    buildIndexDatabase(dbName, files, args)
 
 
 if __name__ == '__main__':
