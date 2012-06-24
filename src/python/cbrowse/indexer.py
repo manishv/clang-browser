@@ -18,7 +18,7 @@ class Indexer:
     def __init__(self, DBName=DEFAULT_DBNAME):
         self.indexDB    = IndexDBWriter(os.path.abspath(DBName))
         self.indexDB.initialize(CursorKind.get_all_kinds())
-
+        self.count =0
 
     def __del__(self):
         del self.indexDB
@@ -40,8 +40,7 @@ class Indexer:
 
         return SymbolLocation(filename, sl, sc, el, ec, kind)
         
-
-    def insertNode(self, node):        
+    def insertDefinitionNode(self, node):
         kind = node.kind
         if kind.is_invalid() or unexposedKind(kind) or \
                 unhandledKind(kind) :
@@ -51,7 +50,48 @@ class Indexer:
         if nodeLoc == None:
             return
 
-        if node.is_definition():
+        # sys.stderr.write("idn: kind: %s filename: %s sl: %d sc: %d el: %d ec: %d\n" %
+        #                  (kind.name, nodeLoc.filename, nodeLoc.sl, 
+        #                   nodeLoc.sc, nodeLoc.el, 
+        #                   nodeLoc.ec))
+        
+        if node.is_definition() or ( \
+            ( type(node.get_ref()) != types.NoneType) and \
+                self.createNode(node.get_ref()) == nodeLoc ):
+            self.indexDB.insertDefinitionNode(nodeLoc)
+            self.indexDB.commit()
+        return
+
+    def insertReferenceNode(self, node):
+        kind = node.kind
+        if kind.is_invalid() or unexposedKind(kind) or \
+                unhandledKind(kind) :
+            return
+
+        nodeLoc = self.createNode(node)
+        if nodeLoc == None or node.is_definition():
+            return
+
+        if ( type(node.get_ref()) != types.NoneType ):
+            refNodeLoc = self.createNode(node.get_ref())
+            if refNodeLoc != None and refNodeLoc != nodeLoc :
+                self.indexDB.insertReferenceNode(nodeLoc, refNodeLoc)
+                if self.count%1000 == 0:  self.indexDB.commit() 
+        return
+
+    def insertNode(self, node, insertDefs):        
+        kind = node.kind
+        if kind.is_invalid() or unexposedKind(kind) or \
+                unhandledKind(kind) :
+            return
+
+        nodeLoc = self.createNode(node)
+        if nodeLoc == None:
+            return
+
+        # self.printNode(node)
+        # print "nodeLoc: %s\n" % nodeLoc
+        if node.is_definition() and insertDefs:
             self.indexDB.insertDefinitionNode(nodeLoc)
             self.indexDB.commit()
         #TODO: Can we update the following statement with isNull()
@@ -65,17 +105,49 @@ class Indexer:
             self.indexDB.commit()
         return
 
+    def visitSubTreeDepthFirst(self, root):
+        stack = [root]
+        while len(stack) != 0:
+            node = stack.pop()
+            for c in node.get_children():
+                stack.append(c)
+            yield node
+
+    def visitSubTreeBreadthFirst(self, root):
+        queue = collections.deque([root])
+        while len(queue) != 0:
+            node = queue.popleft()
+            for c in node.get_children():
+                queue.append(c)
+            yield node
+
     def printNode(self, node):
         print "node: { %s %s %s } " % (node.spelling, node.kind, node.location)
 
-    def insertSubTree(self, nodeQ):
-        if len(nodeQ) == 0:
-            return;
-        node = nodeQ.popleft()
-        self.insertNode(node)
-        for c in node.get_children():
-            nodeQ.append(c)
-        self.insertSubTree(nodeQ)
+    def insertSubTree(self, nodeQ, insertDefs):
+        self.count = 0
+        while len(nodeQ) != 0:
+            node = nodeQ.popleft()
+            if insertDefs:
+                self.insertDefinitionNode(node)
+            else:
+                self.insertReferenceNode(node)
+
+            # filename = node.extent.start.file.name \
+            #     if node.extent.start.file != None else "<node>"
+            # sys.stderr.write("ist: kind: %s filename: %s sl: %d sc: %d el: %d ec: %d\n" %
+            #                  (node.kind.name, filename, 
+            #                   node.extent.start.line,
+            #                   node.extent.start.column,
+            #                   node.extent.end.line,
+            #                   node.extent.end.column))
+
+            self.count = self.count + 1
+            if (self.count % 100) == 0 :
+                sys.stderr.write(".")
+
+            for c in node.get_children():
+                nodeQ.append(c)
 
     def index(self, filename, compiler_opts=[]):
         index            = Index.create()
@@ -85,7 +157,11 @@ class Indexer:
             sys.stderr.write("Error: in loading file %s\n" % fullpathFilename)
             return
         root = tu.cursor
-        self.insertSubTree(collections.deque([root]))
+        # for n in self.visitSubTreeBreadthFirst(root):
+        #     self.insertNode(n)
+        self.insertSubTree(collections.deque([root]), True)
+        sys.stderr.write("Number of nodes: %d\n" % self.count)
+        self.insertSubTree(collections.deque([root]), False)
         return
 
 

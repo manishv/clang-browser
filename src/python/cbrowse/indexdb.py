@@ -201,6 +201,7 @@ class IndexDB:
 
     def getSymbol(self, location):
         fileClass = self.getFileName(location.filename)
+#        print "getSymbol %s\n" % location.filename
         assert(fileClass != None)
         fileId = fileClass.id
         result = self.stormdb.find(Symbol,
@@ -229,6 +230,7 @@ class IndexDBWriter(IndexDB):
 
     #TODO: Need to implement rollback and errorhandling
     def insertDefinitionNode(self, location):
+#        print "insert DefinitionNode %s \n" % location.filename
         assert isinstance(location, SymbolLocation)
         fileId     = self.getOrInsertFileName(location.filename).id
         nodeKindId = self.getNodeKind(location.nodekind).id
@@ -256,11 +258,15 @@ class IndexDBWriter(IndexDB):
 
         symbol = self.getSymbol(location)
         if symbol == None:
+            defSymbol = self.getSymbol(defLocation)
+            if defSymbol == None:
+                defSymbol = self.insertDefinitionNode(defLocation)
+
             symbol = Symbol(location, fileId, nodeKindId)
             self.stormdb.add(symbol)
             self.stormdb.flush()
-            defSymbol = self.getSymbol(defLocation).definition
-            defSymbol.references.add(symbol)
+            defS = defSymbol.definition
+            defS.references.add(symbol)
             self.stormdb.flush()
         return symbol
 

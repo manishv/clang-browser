@@ -1,4 +1,4 @@
-import os
+import os, sys
 import cbrowse.indexer 
 import clang.cindex
 
@@ -31,8 +31,9 @@ def readFunctionCallSymbol(dbr, filename):
 
         
 if __name__ == '__main__':
-    dbName = "./Output/indexer_test.db"
-    sourcefile = "/data/work/clang-browser/tests/indexer_test.c"
+    #sourcefile = "/data/work/clang-browser/tests/indexer_test.c"
+    sourcefile = sys.argv[1][:-1]+'c'
+    dbName = sys.argv[2]
 
     # Remove the database
     if os.path.exists(dbName):
@@ -46,9 +47,9 @@ if __name__ == '__main__':
     del indexer
 
     # Search for the variable definition symbol
-    dbReader = IndexDBReader(dbName);
-    readVariableDefinitionSymbol(dbReader, sourcefile)
+    # dbReader = IndexDBReader(dbName);
+    # readVariableDefinitionSymbol(dbReader, sourcefile)
 
     # Search for the function call symbol
-    readFunctionCallSymbol(dbReader, sourcefile)
+#    readFunctionCallSymbol(dbReader, sourcefile)
 
