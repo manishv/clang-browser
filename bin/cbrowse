@@ -8,4 +8,4 @@ export PYTHONPATH=$PYTHONPATH:$ROOTDIR/src/python
 export PYTHONPATH=$PYTHONPATH:$CLANG_PYTHON_DIR
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LLVM_INSTALL_DIR/lib
 
-python $ROOTDIR/src/python/utils/code-browse.py $*
+python $ROOTDIR/src/python/utils/codebrowse.py $*
