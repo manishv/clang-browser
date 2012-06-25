@@ -49,11 +49,6 @@ class Indexer:
         nodeLoc = self.createNode(node)
         if nodeLoc == None:
             return
-
-        # sys.stderr.write("idn: kind: %s filename: %s sl: %d sc: %d el: %d ec: %d\n" %
-        #                  (kind.name, nodeLoc.filename, nodeLoc.sl, 
-        #                   nodeLoc.sc, nodeLoc.el, 
-        #                   nodeLoc.ec))
         
         if node.is_definition() or ( \
             ( type(node.get_ref()) != types.NoneType) and \
@@ -77,6 +72,7 @@ class Indexer:
             if refNodeLoc != None and refNodeLoc != nodeLoc :
                 self.indexDB.insertReferenceNode(nodeLoc, refNodeLoc)
                 if self.count%1000 == 0:  self.indexDB.commit() 
+        self.indexDB.commit()
         return
 
     def insertNode(self, node, insertDefs):        
@@ -117,6 +113,9 @@ class Indexer:
         queue = collections.deque([root])
         while len(queue) != 0:
             node = queue.popleft()
+            self.count = self.count+1
+            if self.count % 100 == 0:
+                sys.stderr.write(".")
             for c in node.get_children():
                 queue.append(c)
             yield node
@@ -133,15 +132,6 @@ class Indexer:
             else:
                 self.insertReferenceNode(node)
 
-            # filename = node.extent.start.file.name \
-            #     if node.extent.start.file != None else "<node>"
-            # sys.stderr.write("ist: kind: %s filename: %s sl: %d sc: %d el: %d ec: %d\n" %
-            #                  (node.kind.name, filename, 
-            #                   node.extent.start.line,
-            #                   node.extent.start.column,
-            #                   node.extent.end.line,
-            #                   node.extent.end.column))
-
             self.count = self.count + 1
             if (self.count % 100) == 0 :
                 sys.stderr.write(".")
@@ -157,10 +147,9 @@ class Indexer:
             sys.stderr.write("Error: in loading file %s\n" % fullpathFilename)
             return
         root = tu.cursor
-        # for n in self.visitSubTreeBreadthFirst(root):
-        #     self.insertNode(n)
+
         self.insertSubTree(collections.deque([root]), True)
-        sys.stderr.write("Number of nodes: %d\n" % self.count)
+#        sys.stderr.write("Number of nodes: %d\n" % self.count)
         self.insertSubTree(collections.deque([root]), False)
         return
 
