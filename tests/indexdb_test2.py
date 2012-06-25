@@ -44,7 +44,7 @@ def readSymbols(dbName, filename):
 
 if __name__ == '__main__':
 #    print "/data/work/clang-browser/tests/test.m"
-    dbName = "./Output/indexdb_test1.db"
+    dbName = "./Output/indexdb_test2.db"
     sourcefile = "/data/work/clang-browser/src/hw.c"
 
     # Remove the database
